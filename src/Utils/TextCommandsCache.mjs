@@ -12,7 +12,8 @@ const getApiUrl = () => {
     return `${base}/api/v1/integrations/bot/text-commands`
 }
 
-const getBotSecret = () => String(process.env.BOT_SECRET || '').trim()
+const getBotSecret = () =>
+    String(process.env.BOT_SECRET || process.env.RUMBLE_BOT_CONTROL_TOKEN || '').trim()
 
 export const refreshTextCommandsCache = async () => {
     const url = getApiUrl()
@@ -35,8 +36,11 @@ export const refreshTextCommandsCache = async () => {
                 chalk.white(`${cachedCommands.length} commande(s) chargee(s)`)
             )
         }
-    } catch {
-        // silencieux — le bot fonctionne sans si l'API est injoignable
+    } catch (err) {
+        console.warn(
+            chalk.gray('[') + chalk.yellow('TextCmds') + chalk.gray(']'),
+            chalk.yellow(`Echec chargement commandes: ${err?.message || err}`)
+        )
     }
 }
 
