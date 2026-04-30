@@ -1,3 +1,5 @@
+import { findCachedTextCommand } from './TextCommandsCache.mjs'
+
 const DB_COMMAND_MAX_LENGTH = 500
 const TRIGGER_REGEX = /^[a-z0-9_]{2,24}$/
 const ALLOWED_CHANNEL_KEYS = new Set(['kafie', 'vitapvpey', 'glockaucarre'])
@@ -85,6 +87,35 @@ export const findDbCommand = async (client, trigger, channelKey) => {
 
 export const executeDbCommandIfEligible = async ({ client, trigger, sender, channelName, channelKey, hasHardcodedCommand }) => {
     const normalizedChannelKey = normalizeChannelKey(channelKey || channelName || client?.username)
+
+    // Vérifier d'abord le cache API (bot_text_commands PostgreSQL)
+    const cachedCommand = findCachedTextCommand(trigger, normalizedChannelKey)
+    if (cachedCommand) {
+        const now = Date.now()
+        const fakeDbCommand = {
+            command_trigger: cachedCommand.trigger,
+            response_text: cachedCommand.responseText,
+            is_enabled: true,
+            cooldown_seconds: cachedCommand.cooldownSeconds,
+            allow_placeholders: cachedCommand.allowPlaceholders,
+            override_hardcoded: false,
+        }
+        if (hasHardcodedCommand) return false
+        if (shouldThrottle(client, fakeDbCommand, now, normalizedChannelKey)) return true
+        const allowPlaceholders = cachedCommand.allowPlaceholders === true
+        let response = sanitizeMessage(cachedCommand.responseText)
+        if (!response) return true
+        if (allowPlaceholders) {
+            response = applyPlaceholders(response, {
+                username: sender?.username || 'viewer',
+                channel: normalizedChannelKey || channelName || client.username,
+            })
+        }
+        await client.sendMessage(response)
+        console.log(`[${channelName}] API text command: !${trigger}`)
+        return true
+    }
+
     const dbCommand = await findDbCommand(client, trigger, normalizedChannelKey)
     if (!dbCommand) return false
 

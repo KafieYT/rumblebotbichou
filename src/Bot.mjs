@@ -7,6 +7,7 @@ import Database from './Utils/Database.mjs'
 import Functions from './Utils/Functions.mjs'
 import Handler from './Utils/Handler.mjs'
 import { executeDbCommandIfEligible, normalizeChannelKey } from './Utils/DbCommands.mjs'
+import { initTextCommandsCache } from './Utils/TextCommandsCache.mjs'
 import { siteApi } from './services/siteApi.mjs'
 
 // ─── Watchtime tracking ───────────────────────────────────────────────────────
@@ -475,6 +476,7 @@ internalAdminApp.post('/internal/admin/commands/execute', async (req, res) => {
 // ─── Chargement des commandes puis connexion ──────────────────────────────────
 
 await Handler.command(sharedCommands)
+await initTextCommandsCache()
 
 await Promise.all(clients.map((client) => setupClient(client, client.username)))
 
