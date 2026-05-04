@@ -59,7 +59,8 @@ export function startAutoMessages(client, channelName, remoteConfig = null) {
     let sequence = null
 
     if (remoteConfig !== null) {
-        const entries = remoteConfig[channelName.toLowerCase()]
+        // Look for 'bichou' key first (panel admin key), then fall back to channel name
+        const entries = remoteConfig['bichou'] ?? remoteConfig[channelName.toLowerCase()]
         if (Array.isArray(entries) && entries.length > 0) {
             sequence = entries.filter(
                 (e) => e?.message?.trim() && Number.isFinite(e?.delaySeconds) && e.delaySeconds > 0
