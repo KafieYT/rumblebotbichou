@@ -333,6 +333,18 @@ export class RumbleChatClient extends EventEmitter {
         for (const msg of messages) {
             if (!msg?.text) continue
 
+            const msgKey = String(msg.id || msg.created_on || '').trim()
+                ? `sse::${msg.id || msg.created_on}::${msg.user_id}`
+                : `sse::${msg.user_id}::${String(msg.text).slice(0, 80)}`
+
+            if (this._seenMessageKeys.has(msgKey)) continue
+            this._seenMessageKeys.add(msgKey)
+
+            if (this._seenMessageKeys.size > 500) {
+                const keys = Array.from(this._seenMessageKeys)
+                this._seenMessageKeys = new Set(keys.slice(-250))
+            }
+
             const userInfo = usersById[String(msg.user_id)] ?? {}
             const username = userInfo.username || msg.username || String(msg.user_id || 'unknown')
             const displayname = userInfo.channel_name || userInfo.display_name || username
