@@ -486,9 +486,11 @@ internalAdminApp.post('/internal/admin/commands/execute', async (req, res) => {
 await Handler.command(sharedCommands)
 await initTextCommandsCache()
 
-await Promise.all(clients.map((client) => setupClient(client, client.username)))
+// Lance les connexions sans les attendre — _startSSE bloque jusqu'à la
+// déconnexion, donc awaiter ici empêchait les auto-messages de démarrer.
+clients.forEach((client) => setupClient(client, client.username))
 
-// Démarrage des auto-messages par chaîne (config depuis le panel admin, sinon env vars)
+// Démarrage des auto-messages immédiatement après la connexion
 const remoteAutoConfig = await fetchRemoteAutoConfig()
 for (const client of clients) {
     startAutoMessages(client, client.username, remoteAutoConfig)
