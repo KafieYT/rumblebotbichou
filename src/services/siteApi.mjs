@@ -74,13 +74,13 @@ export const siteApi = {
   getCurrentPrediction: () => request('/api/dlive-predictions/current'),
 
   verifyRumbleAccount: (payload) =>
-    request('/api/integrations/rumble/verify', {
+    request('/api/v1/integrations/rumble/verify', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   relayRumbleMessage: (payload) =>
-    request('/api/integrations/rumble/messages', {
+    request('/api/v1/integrations/rumble/messages', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
