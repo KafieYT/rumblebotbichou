@@ -2,6 +2,13 @@ import 'dotenv/config'
 import chalk from 'chalk'
 import express from 'express'
 
+process.on('unhandledRejection', (reason) => {
+    console.error(chalk.red('[Bot] unhandledRejection:'), reason)
+})
+process.on('uncaughtException', (err) => {
+    console.error(chalk.red('[Bot] uncaughtException:'), err)
+})
+
 import { RumbleChatClient } from './rumble/RumbleChatClient.mjs'
 import Database from './Utils/Database.mjs'
 import Functions from './Utils/Functions.mjs'
@@ -9,7 +16,7 @@ import Handler from './Utils/Handler.mjs'
 import { executeDbCommandIfEligible, normalizeChannelKey } from './Utils/DbCommands.mjs'
 import { initTextCommandsCache } from './Utils/TextCommandsCache.mjs'
 import { siteApi } from './services/siteApi.mjs'
-import { startAutoMessages } from './Utils/AutoMessages.mjs'
+import { startAutoMessages, fetchRemoteAutoConfig } from './Utils/AutoMessages.mjs'
 
 // ─── Watchtime tracking ───────────────────────────────────────────────────────
 
@@ -481,9 +488,10 @@ await initTextCommandsCache()
 
 await Promise.all(clients.map((client) => setupClient(client, client.username)))
 
-// Démarrage des auto-messages par chaîne
+// Démarrage des auto-messages par chaîne (config depuis le panel admin, sinon env vars)
+const remoteAutoConfig = await fetchRemoteAutoConfig()
 for (const client of clients) {
-    startAutoMessages(client, client.username)
+    startAutoMessages(client, client.username, remoteAutoConfig)
 }
 
 internalAdminApp

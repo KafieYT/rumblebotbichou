@@ -36,8 +36,11 @@ export async function fetchRemoteAutoConfig() {
         if (res?.config && typeof res.config === 'object') {
             return res.config
         }
-    } catch {
-        // silencieux — fallback env vars
+    } catch (err) {
+        console.warn(
+            chalk.gray('[') + chalk.magenta('AutoMsg') + chalk.gray(']'),
+            chalk.yellow(`Impossible de charger la config depuis le panel: ${err?.message || err} — fallback env vars`)
+        )
     }
     return null
 }
@@ -106,7 +109,9 @@ export function startAutoMessages(client, channelName, remoteConfig = null) {
         }
     }
 
-    currentTimer = setTimeout(tick, sequence[0].delaySeconds * 1000)
+    // First message fires after 10s regardless of configured delay,
+    // so a restart doesn't prevent any messages from ever being sent.
+    currentTimer = setTimeout(tick, 10_000)
 
     return () => {
         stopped = true
