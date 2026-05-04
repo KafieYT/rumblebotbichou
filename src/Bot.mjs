@@ -9,6 +9,7 @@ import Handler from './Utils/Handler.mjs'
 import { executeDbCommandIfEligible, normalizeChannelKey } from './Utils/DbCommands.mjs'
 import { initTextCommandsCache } from './Utils/TextCommandsCache.mjs'
 import { siteApi } from './services/siteApi.mjs'
+import { startAutoMessages } from './Utils/AutoMessages.mjs'
 
 // ─── Watchtime tracking ───────────────────────────────────────────────────────
 
@@ -479,6 +480,11 @@ await Handler.command(sharedCommands)
 await initTextCommandsCache()
 
 await Promise.all(clients.map((client) => setupClient(client, client.username)))
+
+// Démarrage des auto-messages par chaîne
+for (const client of clients) {
+    startAutoMessages(client, client.username)
+}
 
 internalAdminApp
     .listen(INTERNAL_ADMIN_PORT, () => {
