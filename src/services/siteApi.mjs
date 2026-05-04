@@ -84,4 +84,6 @@ export const siteApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  getAutoMessagesConfig: () => request('/api/v1/integrations/bot/auto-messages'),
 }

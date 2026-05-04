@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { siteApi } from '../services/siteApi.mjs'
 
 /**
  * Parse env var format: "msg1:30,msg2:45,msg3:60"
@@ -23,10 +24,22 @@ function parseSequence(raw) {
         .filter(Boolean)
 }
 
-function getSequenceForChannel(channelName) {
+function getEnvSequenceForChannel(channelName) {
     const key = `AUTO_MESSAGES_${channelName.toUpperCase()}`
     const raw = String(process.env[key] || process.env.AUTO_MESSAGES || '').trim()
     return parseSequence(raw)
+}
+
+export async function fetchRemoteAutoConfig() {
+    try {
+        const res = await siteApi.getAutoMessagesConfig()
+        if (res?.config && typeof res.config === 'object') {
+            return res.config
+        }
+    } catch {
+        // silencieux — fallback env vars
+    }
+    return null
 }
 
 function log(channelName, text) {
@@ -39,16 +52,31 @@ function log(channelName, text) {
 
 /**
  * Start the auto-message loop for a single client/channel.
+ * remoteConfig: result of fetchRemoteAutoConfig() — null means use env vars.
  * Returns a stop() function.
  */
-export function startAutoMessages(client, channelName) {
-    const sequence = getSequenceForChannel(channelName)
+export function startAutoMessages(client, channelName, remoteConfig = null) {
+    let sequence = null
+
+    if (remoteConfig !== null) {
+        const entries = remoteConfig[channelName.toLowerCase()]
+        if (Array.isArray(entries) && entries.length > 0) {
+            sequence = entries.filter(
+                (e) => e?.message?.trim() && Number.isFinite(e?.delaySeconds) && e.delaySeconds > 0
+            )
+        }
+    }
+
+    if (!sequence) {
+        sequence = getEnvSequenceForChannel(channelName)
+    }
 
     if (sequence.length === 0) return () => {}
 
-    log(channelName, chalk.green(`${sequence.length} message(s) automatique(s) configuré(s)`))
+    const src = remoteConfig !== null ? 'panel admin' : 'env vars'
+    log(channelName, chalk.green(`${sequence.length} message(s) automatique(s) [${src}]`))
     sequence.forEach((entry, i) => {
-        log(channelName, chalk.gray(`  [${i + 1}] "${entry.message}" → attente ${entry.delaySeconds}s`))
+        log(channelName, chalk.gray(`  [${i + 1}] "${entry.message}" → ${entry.delaySeconds}s`))
     })
 
     let stopped = false
@@ -77,7 +105,6 @@ export function startAutoMessages(client, channelName) {
         }
     }
 
-    // Start after the delay of the first entry so it doesn't fire immediately on boot
     currentTimer = setTimeout(tick, sequence[0].delaySeconds * 1000)
 
     return () => {
